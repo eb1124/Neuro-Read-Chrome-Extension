@@ -1,0 +1,46 @@
+{
+  "manifest_version": 3,
+  "name": "NEURO-READS",
+  "version": "1.0.0",
+  "description": "A dyslexia-friendly reading assistant that transforms webpage text and layout in real time.",
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": ["https://router.huggingface.co/*"],
+  "background": {
+    "service_worker": "background/serviceWorker.js"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "assets/icons/icon16.png",
+      "48": "assets/icons/icon48.png",
+      "128": "assets/icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "assets/icons/icon16.png",
+    "48": "assets/icons/icon48.png",
+    "128": "assets/icons/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": [
+        "utils/textProcessor.js",
+        "ai/promptTemplates.js",
+        "ai/aiClient.js",
+        "content/domScanner.js",
+        "content/styleInjector.js",
+        "content/domRewriter.js",
+        "content/textSimplifier.js",
+        "content/content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/fonts/OpenDyslexic-Regular.woff2"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEURO-READS Test Harness</title>
+  <style>
+    body { font-family: sans-serif; line-height: 1.6; max-width: 800px; margin: 40px auto; padding: 20px; }
+    article { border: 1px solid #ccc; padding: 20px; border-radius: 8px; margin-bottom: 20px; background: #fafafa; }
+    h1 { color: #333; }
+    p { margin-bottom: 1em; }
+    .controls { border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 20px; }
+    button { padding: 10px 20px; font-size: 16px; cursor: pointer; background: #6366f1; color: white; border: none; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  
+  <div class="controls">
+    <h2>Local Test Controls</h2>
+    <p>Open the browser console (F12) to see debug logs.</p>
+    <button id="test-btn">TRIGGER AI SIMPLIFICATION (MOCK)</button>
+  </div>
+
+  <article id="test-article">
+    <h1>Dyslexia</h1>
+    <p>Dyslexia, also known as reading disorder, is characterized by trouble with reading despite normal intelligence. Different people are affected to varying degrees. Problems may include difficulties in spelling words, reading quickly, writing words, "sounding out" words in the head, pronouncing words when reading aloud and understanding what one reads.</p>
+    <p>Often these difficulties are first noticed at school. When someone who previously could read loses their ability, it is known as alexia. The difficulties are involuntarily and people with this disorder have a normal desire to learn. People with dyslexia have higher rates of attention deficit hyperactivity disorder (ADHD), developmental language disorders, and difficulties with numbers.</p>
+  </article>
+
+  <!-- Load Extension Scripts locally for testing -->
+  <script src="utils/textProcessor.js"></script>
+  <script src="ai/promptTemplates.js"></script>
+  <script src="content/domScanner.js"></script>
+  <script src="content/domRewriter.js"></script>
+  <script src="content/styleInjector.js"></script>
+  <script src="content/textSimplifier.js"></script>
+
+  <script>
+    // Mock the external chrome APIs so the script can run purely in the browser tab
+    window.chrome = {
+      runtime: {
+        sendMessage: async (msg, callback) => {
+          console.log('[MOCK SW] Received message:', msg.type);
+          if (msg.type === 'SIMPLIFY_TEXT') {
+            console.log('[MOCK SW] System Prompt:', msg.systemPrompt.substring(0, 30) + '...');
+            console.log('[MOCK SW] User Prompt:', msg.userPrompt);
+            
+            // Mock a successful API response after 1.5 seconds
+            setTimeout(() => {
+              callback({
+                success: true,
+                simplified: "[SIMPLIFIED: " + msg.userPrompt.substring(50, 100) + "...]"
+              });
+            }, 1500);
+          }
+          return true;
+        },
+        lastError: null
+      }
+    };
+
+    // Replace the real aiClient with our mock client that uses the mock chrome.runtime
+    var NeuroReadsAI = (() => {
+      async function simplifyText(text) {
+        return new Promise((resolve) => {
+          chrome.runtime.sendMessage({
+            type: 'SIMPLIFY_TEXT',
+            systemPrompt: NeuroReadsPrompts.SYSTEM_PROMPT,
+            userPrompt: NeuroReadsPrompts.buildUserPrompt(text)
+          }, (response) => {
+            if (!response || !response.success) {
+              resolve(null);
+            } else {
+              resolve(response.simplified);
+            }
+          });
+        });
+      }
+      return { simplifyText };
+    })();
+
+    // Wire up the button
+    document.getElementById('test-btn').addEventListener('click', () => {
+      console.log('--- STARTING AI TEST ---');
+      NeuroReadsTextSimplifier.startSimplification();
+      // Manually trigger the mock scroll entry since we aren't scrolling
+      setTimeout(() => {
+        const article = document.getElementById('test-article');
+        // Force the text simplifier to process the article
+        // (Since the observer might not fire instantly if we are already at the top)
+        NeuroReadsTextSimplifier.observeNewElements(document.body);
+        window.scrollBy(0, 1); // trigger observer
+      }, 500);
+    });
+
+  </script>
+</body>
+</html>
